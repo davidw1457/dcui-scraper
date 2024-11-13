@@ -2,7 +2,10 @@ module github.com/davidw1457/dcui-scraper
 
 go 1.23.3
 
-require fyne.io/fyne/v2 v2.5.2
+require (
+	fyne.io/fyne/v2 v2.5.2
+	github.com/mattn/go-sqlite3 v1.14.24
+)
 
 require (
 	fyne.io/systray v1.11.0 // indirect
