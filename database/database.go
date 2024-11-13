@@ -72,6 +72,9 @@ func (db *Database) Close() {
 
 func (db *Database) initialSetup() error {
 	rows, err := db.database.Query(queries["pingDatabase"])
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil || rows.Err() != nil {
 		_, err = db.database.Exec(queries["createDatabase"])
 		if err != nil {
@@ -81,7 +84,6 @@ func (db *Database) initialSetup() error {
 			return err
 		}
 	}
-	defer rows.Close()
 
 	return nil
 }
