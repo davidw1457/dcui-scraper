@@ -59,7 +59,7 @@ func main() {
 		mainLog.Fatalln("unable to open database")
 	}
 
-	db.Dummy()
+	defer db.Close()
 
 	myApp := app.New()
 	myWindow := myApp.NewWindow("DCUI Scraper")

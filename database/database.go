@@ -65,13 +65,24 @@ func New() (Database, error) {
 	return dcuiDB, nil
 }
 
-func (db *Database) Dummy() {
-	// TODO: Get rid of this func
-	fmt.Println("this is a dummy func to get around unused vars during dev. Delete me")
+func (db *Database) Close() {
+	db.log.Println("closing database")
+	defer db.database.Close()
 }
 
 func (db *Database) initialSetup() error {
-	// TODO: Setup DCUI DB
+	rows, err := db.database.Query(queries["pingDatabase"])
+	if err != nil || rows.Err() != nil {
+		_, err = db.database.Exec(queries["createDatabase"])
+		if err != nil {
+			err = fmt.Errorf("database.initialSetup: %w", err)
+			db.log.Println(err)
+
+			return err
+		}
+	}
+	defer rows.Close()
+
 	return nil
 }
 
