@@ -1,15 +1,10 @@
 package database
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3" // Required to use sqlite3 driver
 )
@@ -76,7 +71,7 @@ func (db *Database) Close() {
 }
 
 func (db *Database) UpdateDatabase() error {
-	allSeries, err := getAllSeries()
+	allSeries, err := db.getAllSeries()
 	if err != nil {
 		err = fmt.Errorf("database.UpdateDatabase: %w", err)
 		db.log.Println(err)
@@ -85,7 +80,7 @@ func (db *Database) UpdateDatabase() error {
 	}
 
 	for _, r := range allSeries {
-		for _, s := range r.Records.Comicseries {
+		for _, s := range r.Records.ComicSeries {
 			db.log.Printf("%v : %v\n", s.Title, s.UUID)
 		}
 	}
@@ -157,110 +152,4 @@ func openDB(userHome string) (*sql.DB, error) {
 	}
 
 	return dbase, nil
-}
-
-func getAllSeries() ([]SearchResult, error) {
-	url := "https://search.dcuniverseinfinite.com/api/v1/public/engines/search.json"
-	reqBody := searchBody{
-		engine_key:     engineKey, // engineKey is in creds.go, not synced due to security concerns
-		page:           1,
-		per_page:       100,
-		document_types: []string{"comicseries"},
-		filters:        map[string]string{},
-		sort_field: map[string]string{
-			"comicseries": "first_released",
-		},
-		sort_direction: map[string]string{
-			"comicseries": "desc",
-		},
-	}
-
-	jsonData, err := json.Marshal(reqBody)
-	if err != nil {
-		err = fmt.Errorf("database.getAllSeries: %w", err)
-
-		return nil, err
-	}
-
-	resp, err := post(url, jsonData)
-	if err != nil {
-		err = fmt.Errorf("database.getAllSeries: %w", err)
-
-		return nil, err
-	}
-
-	searchResults := []SearchResult{}
-
-	var singleResult SearchResult
-
-	err = json.Unmarshal(resp, &singleResult)
-	if err != nil {
-		err = fmt.Errorf("database.getAllSeries: %w", err)
-
-		return nil, err
-	}
-
-	numPages := singleResult.Info.Comicseries.Num_pages
-	searchResults = append(searchResults, singleResult)
-
-	for p := 2; p <= numPages; p++ {
-		reqBody.page = p
-
-		jsonData, err = json.Marshal(reqBody)
-		if err != nil {
-			err = fmt.Errorf("database.getAllSeries: %w", err)
-
-			return nil, err
-		}
-
-		resp, err = post(url, jsonData)
-		if err != nil {
-			err = fmt.Errorf("database.getAllSeries: %w", err)
-
-			return nil, err
-		}
-
-		err = json.Unmarshal(resp, &singleResult)
-		if err != nil {
-			err = fmt.Errorf("database.getAllSeries: %w", err)
-
-			return nil, err
-		}
-
-		searchResults = append(searchResults, singleResult)
-	}
-
-	return searchResults, nil
-}
-
-func post(uri string, data []byte) ([]byte, error) {
-	resp, err := http.Post(uri, "application/json", bytes.NewBuffer(data))
-	if err != nil {
-		if resp != nil {
-			resp.Body.Close()
-		}
-		time.Sleep(30 * time.Second)
-
-		resp, err = http.Post(uri, "application/json", bytes.NewBuffer(data))
-		if err != nil {
-			if resp != nil {
-				resp.Body.Close()
-			}
-
-			err = fmt.Errorf("database.post: %w", err)
-
-			return nil, err
-		}
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		err = fmt.Errorf("database.post: %w", err)
-
-		return nil, err
-	}
-
-	return body, nil
 }

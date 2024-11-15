@@ -54,18 +54,18 @@ func main() {
 
 	mainLog.Println("opening backend database")
 
-	db, err := database.New()
+	dbase, err := database.New()
 	if err != nil {
 		mainLog.Fatalln("unable to open database")
 	}
 
-	defer db.Close()
+	defer dbase.Close()
 
 	myApp := app.New()
 	myWindow := myApp.NewWindow("DCUI Scraper")
 
 	updateButton := widget.NewButton("Update DCUI Database", func() {
-		err := db.UpdateDatabase()
+		err := dbase.UpdateDatabase()
 		if err != nil {
 			// TODO: Update UI if there is an error
 			mainLog.Println(err)
