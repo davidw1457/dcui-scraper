@@ -108,7 +108,7 @@ func (db *Database) initialSetup() error {
 }
 
 func openLog(userHome string) (*log.Logger, error) {
-	logPath := userHome + sep + "logs"
+	logPath := userHome + sep + ".dcui" + sep + "logs"
 
 	logFile, err := os.OpenFile(logPath+sep+"dcui-scraper.log",
 		os.O_WRONLY|os.O_CREATE|os.O_APPEND, userRWX)

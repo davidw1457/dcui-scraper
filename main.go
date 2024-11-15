@@ -27,7 +27,7 @@ func main() {
 
 	sep := string(os.PathSeparator)
 
-	logPath := userHome + sep + "logs"
+	logPath := userHome + sep + ".dcui" + sep + "logs"
 
 	_, err = os.Stat(logPath)
 	if err != nil {
