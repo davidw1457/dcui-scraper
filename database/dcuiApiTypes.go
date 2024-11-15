@@ -75,3 +75,14 @@ type Creator struct {
 	Name         string
 	Display_name string //nolint:revive,stylecheck
 }
+
+// Search POST body structs.
+type searchBody struct {
+	engine_key     string
+	page           int
+	per_page       int
+	document_types []string
+	filters        map[string]string
+	sort_field     map[string]string
+	sort_direction map[string]string
+}

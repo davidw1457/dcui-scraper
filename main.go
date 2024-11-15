@@ -64,7 +64,13 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("DCUI Scraper")
 
-	updateButton := widget.NewButton("Update DCUI Database", updateDatabase)
+	updateButton := widget.NewButton("Update DCUI Database", func() {
+		err := db.UpdateDatabase()
+		if err != nil {
+			// TODO: Update UI if there is an error
+			mainLog.Println(err)
+		}
+	})
 	filterText := canvas.NewText("Filters", color.White)
 	titleFilterButton := widget.NewButton("Title", titleFilter)
 	dateFilterButton := widget.NewButton("Date Range", dateFilter)
@@ -79,10 +85,6 @@ func main() {
 		widget.NewSeparator(), rightPane, layout.NewSpacer()))
 
 	myWindow.ShowAndRun()
-}
-
-func updateDatabase() {
-	fmt.Println("updateButton pressed")
 }
 
 func titleFilter() {
