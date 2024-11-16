@@ -65,7 +65,7 @@ func main() {
 	myWindow := myApp.NewWindow("DCUI Scraper")
 
 	updateButton := widget.NewButton("Update DCUI Database", func() {
-		err := dbase.UpdateDatabase()
+		err := dbase.RefreshDatabase()
 		if err != nil {
 			// TODO: Update UI if there is an error
 			mainLog.Println(err)

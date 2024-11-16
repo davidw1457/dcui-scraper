@@ -16,23 +16,22 @@ DROP TABLE IF EXISTS series;
 
 -- Create series table
 CREATE TABLE series (
-	id           INTEGER PRIMARY KEY,
+	uuid         TEXT NOT NULL PRIMARY KEY,
 	title        TEXT NOT NULL,
 	description  TEXT NOT NULL,
 	bookCount    INT NOT NULL,
 	issueCount   INT NOT NULL,
 	volumeCount  INT NOT NULL,
 	omnibusCount INT NOT NULL,
-	url          TEXT NOT NULL UNIQUE,
-	uuid         TEXT NOT NULL UNIQUE,
+	url          TEXT NOT NULL,
 	dateUpdated  INT NOT NULL,
 	needUpdate   INT NOT NULL
 );
 
 -- Create issue table
 CREATE TABLE issue (
-	id              INTEGER PRIMARY KEY,
-	seriesID        INT NOT NULL,
+	uuid            TEXT NOT NULL PRIMARY KEY,
+	seriesUUID      INT NOT NULL,
 	title           TEXT NOT NULL,
 	description     TEXT NOT NULL,
 	publisher       TEXT NOT NULL,
@@ -40,45 +39,45 @@ CREATE TABLE issue (
 	issueNumber     TEXT NOT NULL,
 	pages           INT NOT NULL,
 	publicationDate INT NOT NULL,
-	url             TEXT NOT NULL UNIQUE,
-	uuid            TEXT NOT NULL UNIQUE,
+	url             TEXT NOT NULL,
 	subscription    TEXT NOT NULL,
-	toAdd           TEXT
+	toAdd           TEXT,
+	FOREIGN KEY (seriesUUID) REFERENCES series(uuid) ON DELETE CASCADE
 );
 
 -- Create series genre table
 CREATE TABLE seriesGenre (
-	id    INT NOT NULL,
+	uuid  INT NOT NULL,
 	genre TEXT NOT NULL,
-	PRIMARY KEY (id, genre),
-	FOREIGN KEY (id) REFERENCES series(id) ON DELETE CASCADE
+	PRIMARY KEY (uuid, genre),
+	FOREIGN KEY (uuid) REFERENCES series(uuid) ON DELETE CASCADE
 );
 
 -- Create series imprint table
 CREATE TABLE seriesImprint (
-    id      INT NOT NULL,
+    uuid    INT NOT NULL,
 	imprint TEXT NOT NULL,
-	PRIMARY KEY (id, imprint),
-	FOREIGN KEY (id) REFERENCES series(id) ON DELETE CASCADE
+	PRIMARY KEY (uuid, imprint),
+	FOREIGN KEY (uuid) REFERENCES series(uuid) ON DELETE CASCADE
 );
 
 -- Create issue tag table
 CREATE TABLE issueTag (
-    id       INT NOT NULL,
+    uuid     INT NOT NULL,
 	category TEXT NOT NULL,
 	name     TEXT NOT NULL,
-	PRIMARY KEY (id, category, name),
-	FOREIGN KEY (id) REFERENCES issue(id) ON DELETE CASCADE
+	PRIMARY KEY (uuid, category, name),
+	FOREIGN KEY (uuid) REFERENCES issue(uuid) ON DELETE CASCADE
 );
 
 -- Create issue creator table
 CREATE TABLE issueCreator (
-	id          INT NOT NULL,
+	uuid        INT NOT NULL,
 	type        TEXT NOT NULL,
 	name        TEXT NOT NULL,
 	displayName TEXT NOT NULL,
-	PRIMARY KEY (id, type, name, displayName),
-	FOREIGN KEY (id) REFERENCES issue(id) ON DELETE CASCADE
+	PRIMARY KEY (uuid, type, name, displayName),
+	FOREIGN KEY (uuid) REFERENCES issue(uuid) ON DELETE CASCADE
 );`,
 	// query to verify if database tables exist
 	"pingDatabase": `SELECT *

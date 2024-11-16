@@ -21,6 +21,7 @@ type SearchResultRecordsComicseries struct {
 	Imprints     []string `json:"imprints"`
 	VolumeCount  int      `json:"volume_count"`  //nolint:tagliatelle
 	OmnibusCount int      `json:"omnibus_count"` //nolint:tagliatelle
+	description  string
 }
 
 type SearchResultsInfo struct {

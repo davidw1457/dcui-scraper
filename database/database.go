@@ -2,9 +2,11 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3" // Required to use sqlite3 driver
 )
@@ -65,30 +67,53 @@ func New() (Database, error) {
 	return dcuiDB, nil
 }
 
-func (db *Database) Close() {
+func (db Database) Close() {
 	db.log.Println("closing database")
 	defer db.database.Close()
 }
 
-func (db *Database) UpdateDatabase() error {
+func (db Database) RefreshDatabase() error {
 	allSeries, err := db.getAllSeries()
 	if err != nil {
-		err = fmt.Errorf("database.UpdateDatabase: %w", err)
+		err = fmt.Errorf("database.RefreshDatabase: %w", err)
 		db.log.Println(err)
 
 		return err
 	}
 
 	for _, r := range allSeries {
-		for _, s := range r.Records.ComicSeries {
-			db.log.Printf("%v : %v\n", s.Title, s.UUID)
+		for _, series := range r.Records.ComicSeries {
+			time.Sleep(apiDelay)
+
+			description, err := db.getSeriesDescription(series.UUID)
+			if err != nil {
+				err = fmt.Errorf("database.RefreshDatabase: %w", err)
+				db.log.Println(err)
+				if errors.Is(err, apiResponseError{}) {
+					db.log.Printf("skipping %v %v\n", series.UUID, series.Title)
+
+					continue
+				}
+
+				return err
+			}
+
+			series.description = description
+
+			err = db.insertSeries(series)
+			if err != nil {
+				err = fmt.Errorf("database.RefreshDatabase: %w", err)
+				db.log.Println(err)
+
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (db *Database) initialSetup() error {
+func (db Database) initialSetup() error {
 	rows, err := db.database.Query(queries["pingDatabase"])
 	if rows != nil {
 		defer rows.Close()
@@ -152,4 +177,11 @@ func openDB(userHome string) (*sql.DB, error) {
 	}
 
 	return dbase, nil
+}
+
+func (db Database) insertSeries(series SearchResultRecordsComicseries) error {
+	// TODO: insert contents of series to the database
+	db.log.Printf("%v %v %v\n", series.UUID, series.Title, series.description)
+
+	return nil
 }
