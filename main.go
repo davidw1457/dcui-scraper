@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -64,12 +65,26 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("DCUI Scraper")
 
+	var rightSide *fyne.Container
+
 	updateButton := widget.NewButton("Update DCUI Database", func() {
+		mainLog.Println("updating DCUI database")
+
+		holding := rightSide
+		rightSide = container.New(layout.NewCenterLayout(), widget.NewActivity())
+
+		rightSide.Refresh()
+
 		err := dbase.RefreshDatabase()
 		if err != nil {
 			// TODO: Update UI if there is an error
 			mainLog.Println(err)
 		}
+
+		rightSide = holding
+
+		rightSide.Refresh()
+		mainLog.Println("update comlete")
 	})
 	filterText := canvas.NewText("Filters", color.White)
 	titleFilterButton := widget.NewButton("Title", titleFilter)
@@ -80,9 +95,10 @@ func main() {
 	centerPane := container.New(layout.NewVBoxLayout(), canvas.NewText("Filter Options:", color.White))
 	// TODO: Add a widget.NewTable to hold filter output
 	rightPane := container.New(layout.NewVBoxLayout(), canvas.NewText("Filter Output:", color.White))
+	rightSide = container.New(layout.NewHBoxLayout(), centerPane, widget.NewSeparator(), rightPane)
 
-	myWindow.SetContent(container.New(layout.NewHBoxLayout(), leftPane, widget.NewSeparator(), centerPane,
-		widget.NewSeparator(), rightPane, layout.NewSpacer()))
+	myWindow.SetContent(container.New(layout.NewHBoxLayout(), leftPane, widget.NewSeparator(), rightSide,
+		layout.NewSpacer()))
 
 	myWindow.ShowAndRun()
 }

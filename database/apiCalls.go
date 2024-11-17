@@ -31,8 +31,9 @@ func (e apiResponseError) Is(target error) bool {
 }
 
 func (db Database) getAllSeries() ([]SearchResult, error) {
-	const recordsPerPage = 100
+	db.log.Println("getting all series from DCUI API")
 
+	const recordsPerPage = 100
 	reqBody := SearchBody{
 		EngineKey:     engineKey, // engineKey is in creds.go, not synced due to security concerns
 		Page:          startPage,
@@ -47,6 +48,8 @@ func (db Database) getAllSeries() ([]SearchResult, error) {
 		},
 	}
 
+	db.log.Printf("retrieving first %v records\n", recordsPerPage)
+
 	singleResult, err := db.requestSeries(reqBody)
 	if err != nil {
 		err = fmt.Errorf("database.getAllSeries: %w", err)
@@ -55,15 +58,13 @@ func (db Database) getAllSeries() ([]SearchResult, error) {
 		return nil, err
 	}
 
-	searchResults := []SearchResult{}
-
+	searchResults := []SearchResult{singleResult}
 	numPages := singleResult.Info.ComicSeries.NumPages
 	nextPage := startPage + 1
 
-	searchResults = append(searchResults, singleResult)
-
 	for p := nextPage; p <= numPages; p++ {
 		time.Sleep(apiDelay)
+		db.log.Printf("retrieving records %v/%v\n", p*recordsPerPage, singleResult.Info.ComicSeries.TotalResultCount)
 
 		reqBody.Page = p
 
@@ -78,10 +79,14 @@ func (db Database) getAllSeries() ([]SearchResult, error) {
 		searchResults = append(searchResults, singleResult)
 	}
 
+	db.log.Println("done getting all series")
+
 	return searchResults, nil
 }
 
 func (db Database) requestSeries(reqBody SearchBody) (SearchResult, error) {
+	db.log.Println("requesting series")
+
 	const uri = "https://search.dcuniverseinfinite.com/api/v1/public/engines/search.json"
 
 	var searchResult SearchResult
@@ -111,6 +116,8 @@ func (db Database) requestSeries(reqBody SearchBody) (SearchResult, error) {
 
 		return searchResult, err
 	}
+
+	db.log.Println("series retrieved")
 
 	return searchResult, nil
 }
@@ -154,6 +161,8 @@ func post(uri string, data []byte) ([]byte, error) {
 }
 
 func (db Database) getSeriesDescription(uuid string) (string, error) {
+	db.log.Println("getting series description")
+
 	uri := fmt.Sprintf("https://www.dcuniverseinfinite.com/api/comics/1/series/%v/?trans=en", uuid)
 
 	resp, err := get(uri)
@@ -175,6 +184,8 @@ func (db Database) getSeriesDescription(uuid string) (string, error) {
 
 		return "", err
 	}
+
+	db.log.Println("series description retrieved")
 
 	return seriesDetail.Description, nil
 }

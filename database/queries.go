@@ -24,8 +24,8 @@ CREATE TABLE series (
 	volumeCount  INT NOT NULL,
 	omnibusCount INT NOT NULL,
 	url          TEXT NOT NULL,
-	dateUpdated  INT NOT NULL,
-	needUpdate   INT NOT NULL
+	dateUpdated  INT NOT NULL DEFAULT 0,
+	needUpdate   INT NOT NULL DEFAULT 1
 );
 
 -- Create issue table
@@ -83,4 +83,48 @@ CREATE TABLE issueCreator (
 	"pingDatabase": `SELECT *
 FROM series
 LIMIT 1;`,
+}
+
+var templates = map[string]string{
+	// upsert series.
+	"upsertSeries": `INSERT INTO series (
+	uuid,
+	title,
+	description,
+	bookCount,
+	issueCount,
+	volumeCount,
+	omnibusCount,
+	url)
+VALUES
+    %v
+ON CONFLICT DO UPDATE SET
+	title = excluded.title,
+	description = excluded.description,
+	bookCount = excluded.bookCount,
+	issueCount = excluded.issueCount,
+	volumeCount = excluded.volumeCount,
+	omnibusCount = excluded.omnibusCount,
+	url = excluded.url,
+	needUpdate = CASE
+		WHEN bookCount <> excluded.bookCount THEN 1
+		WHEN dateUpdated < %v THEN 1
+		ELSE 0
+	END;`,
+	// upsert seriesGenre.
+	"upsertSeriesGenre": `INSERT INTO seriesGenre (
+	uuid,
+	genre
+)
+VALUES
+	%v
+ON CONFLICT DO NOTHING;`,
+	// upsert seriesImprint.
+	"upsertSeriesImprint": `INSERT INTO seriesImprint (
+	uuid,
+	imprint
+)
+VALUES
+	%v
+ON CONFLICT DO NOTHING;`,
 }

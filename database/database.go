@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3" // Required to use sqlite3 driver
@@ -73,6 +74,8 @@ func (db Database) Close() {
 }
 
 func (db Database) RefreshDatabase() error {
+	db.log.Println("refreshing database")
+
 	allSeries, err := db.getAllSeries()
 	if err != nil {
 		err = fmt.Errorf("database.RefreshDatabase: %w", err)
@@ -81,8 +84,9 @@ func (db Database) RefreshDatabase() error {
 		return err
 	}
 
-	for _, r := range allSeries {
-		for _, series := range r.Records.ComicSeries {
+	for i, r := range allSeries {
+		t := r.Info.ComicSeries.TotalResultCount
+		for j, series := range r.Records.ComicSeries {
 			time.Sleep(apiDelay)
 
 			description, err := db.getSeriesDescription(series.UUID)
@@ -99,6 +103,9 @@ func (db Database) RefreshDatabase() error {
 			}
 
 			series.description = description
+			c := i*100 + j + 1
+
+			db.log.Printf("inserting %v/%v\n", c, t)
 
 			err = db.insertSeries(series)
 			if err != nil {
@@ -110,10 +117,14 @@ func (db Database) RefreshDatabase() error {
 		}
 	}
 
+	db.log.Println("done refreshing database")
+
 	return nil
 }
 
 func (db Database) initialSetup() error {
+	db.log.Println("setting up database")
+
 	rows, err := db.database.Query(queries["pingDatabase"])
 	if rows != nil {
 		defer rows.Close()
@@ -128,6 +139,8 @@ func (db Database) initialSetup() error {
 			return err
 		}
 	}
+
+	db.log.Println("database setup complete")
 
 	return nil
 }
@@ -180,8 +193,73 @@ func openDB(userHome string) (*sql.DB, error) {
 }
 
 func (db Database) insertSeries(series SearchResultRecordsComicseries) error {
-	// TODO: insert contents of series to the database
-	db.log.Printf("%v %v %v\n", series.UUID, series.Title, series.description)
+	db.log.Printf("upserting series %v\n", series.UUID)
+
+	updateThreshold := time.Now()
+	updateThreshold = updateThreshold.AddDate(-1, 0, 0)
+	updateThresholdInt := updateThreshold.Unix()
+
+	url := fmt.Sprintf("https://www.dcuniverseinfinite.com/comics/series/%v/%v", series.Slug, series.UUID)
+	value := fmt.Sprintf("('%v','%v','%v',%v,%v,%v,%v,'%v')",
+		sanitizeSQLString(series.UUID),
+		sanitizeSQLString(series.Title),
+		sanitizeSQLString(series.description),
+		series.BooksCount,
+		series.IssueCount,
+		series.VolumeCount,
+		series.OmnibusCount,
+		url)
+	qryUpsertSeries := fmt.Sprintf(templates["upsertSeries"], value, updateThresholdInt)
+
+	_, err := db.database.Exec(qryUpsertSeries)
+	if err != nil {
+		err = fmt.Errorf("database.insertSeries: %w", err)
+		db.log.Println(err)
+		db.log.Println(qryUpsertSeries)
+
+		return err
+	}
+
+	db.log.Println("upserting series genres")
+
+	for _, g := range series.Genres {
+		value = fmt.Sprintf("('%v','%v')", sanitizeSQLString(series.UUID), sanitizeSQLString(g))
+		qryUpsertSeriesGenre := fmt.Sprintf(templates["upsertSeriesGenre"], value)
+
+		_, err := db.database.Exec(qryUpsertSeriesGenre)
+		if err != nil {
+			err = fmt.Errorf("database.insertSeries: %w", err)
+			db.log.Println(err)
+			db.log.Println(qryUpsertSeriesGenre)
+
+			return err
+		}
+	}
+
+	db.log.Println("upserting series imprints")
+
+	for _, i := range series.Imprints {
+		value = fmt.Sprintf("('%v','%v')", sanitizeSQLString(series.UUID), sanitizeSQLString(i))
+		qryUpsertSeriesImprint := fmt.Sprintf(templates["upsertSeriesImprint"], value)
+
+		_, err := db.database.Exec(qryUpsertSeriesImprint)
+		if err != nil {
+			err = fmt.Errorf("database.insertSeries: %w", err)
+			db.log.Println(err)
+			db.log.Println(qryUpsertSeriesImprint)
+
+			return err
+		}
+	}
+
+	db.log.Println("series upsert complete")
 
 	return nil
+}
+
+func sanitizeSQLString(s string) string {
+	s = strings.ReplaceAll(s, "\r", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+
+	return strings.ReplaceAll(s, "'", "''")
 }
